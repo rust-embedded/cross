@@ -1,0 +1,102 @@
+FROM ubuntu:18.04
+
+COPY common.sh /
+RUN /common.sh
+
+COPY cmake.sh /
+RUN /cmake.sh
+
+COPY xargo.sh /
+RUN /xargo.sh
+
+COPY xbuild.sh /
+RUN /xbuild.sh
+
+ENV LLVM_XTENSA_PREFIX="/llvm-xtensa"
+
+RUN apt-get update \
+ && apt-get install --assume-yes --no-install-recommends g++ ninja-build python \
+ && export LLVM_XTENSA_SRC=/tmp/llvm-xtensa \
+ && git clone --depth 1 -b xtensa_release_9.0.1_with_rust_patches https://github.com/MabezDev/llvm-project.git "${LLVM_XTENSA_SRC}" \
+ && cd "${LLVM_XTENSA_SRC}" \
+ && mkdir build \
+ && cd build \
+ && cmake ../llvm \
+      -G Ninja \
+      -DLLVM_TARGETS_TO_BUILD=X86 \
+      -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=Xtensa \
+      -DLLVM_ENABLE_PROJECTS='clang;lld' \
+      -DLLVM_INSTALL_UTILS=ON \
+      -DLLVM_INCLUDE_EXAMPLES=OFF \
+      -DLLVM_INCLUDE_TESTS=OFF \
+      -DLLVM_INCLUDE_DOCS=OFF \
+      -DLLVM_INCLUDE_BENCHMARKS=OFF \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_INSTALL_PREFIX="${LLVM_XTENSA_PREFIX}" \
+ && cmake --build . --target install \
+ && rm -r "${LLVM_XTENSA_SRC}" \
+ && rm -rf /var/lib/apt/lists/*
+
+ENV RUST_XTENSA_SRC=/rust-xtensa-src
+ENV RUST_XTENSA_PREFIX=/rust-xtensa
+
+RUN apt-get update \
+ && apt-get install --assume-yes curl libssl-dev \
+ && rm -rf /var/lib/apt/lists/* \
+ && git clone --depth 1 -b xtensa-support-master https://github.com/reitermarkus/rust "${RUST_XTENSA_SRC}" \
+ && cd "${RUST_XTENSA_SRC}" \
+ && mkdir -p "${RUST_XTENSA_PREFIX}" \
+ && ./configure \
+      --enable-lld \
+      --disable-docs \
+      --disable-compiler-docs \
+      --llvm-root="${LLVM_XTENSA_PREFIX}" \
+      --prefix="${RUST_XTENSA_PREFIX}" \
+      --release-channel=nightly \
+ && ./x.py build \
+ && ./x.py install \
+ && ./x.py clean \
+ && rm -r build
+
+ENV XARGO_RUST_SRC="${RUST_XTENSA_SRC}/src"
+ENV PATH="${RUST_XTENSA_PREFIX}/bin:${LLVM_XTENSA_PREFIX}/bin:$PATH"
+
+RUN apt-get update \
+ && apt-get install --assume-yes \
+    git \
+    wget \
+    libncurses-dev \
+    flex \
+    bison \
+    gperf \
+    python \
+    python-pip \
+    ninja-build \
+    ccache \
+    jq \
+ && rm -rf /var/lib/apt/lists/*
+
+ARG IDF_VERSION='release/v3.3'
+ENV IDF_PATH=/esp-idf
+RUN git clone -b "${IDF_VERSION}" --depth 1 --recursive https://github.com/espressif/ESP8266_RTOS_SDK "${IDF_PATH}" \
+ && git -C "${IDF_PATH}" checkout --recurse-submodules "${IDF_VERSION}" \
+ && pip install -r "${IDF_PATH}/requirements.txt" \
+ && chmod -R 0777 "${IDF_PATH}"
+
+ARG ESP_VERSION="1.22.0-100-ge567ec7-5.2.0"
+ENV ESP_PATH=/esp
+RUN curl \
+       --proto '=https' \
+       --tlsv1.2 \
+       -sSf \
+       -o "${ESP_PATH}.tar.gz" \
+       "https://dl.espressif.com/dl/xtensa-lx106-elf-linux64-${ESP_VERSION}.tar.gz" \
+ && mkdir "${ESP_PATH}" \
+ && tar -xzf "${ESP_PATH}.tar.gz" -C "${ESP_PATH}" \
+ && rm -rf "${ESP_PATH}.tar.gz" \
+ && chmod -R 0777 "${ESP_PATH}"
+
+ENV PATH="${ESP_PATH}/xtensa-lx106-elf/bin:$PATH"
+
+COPY xtensa-entry.sh /
+ENTRYPOINT ["/xtensa-entry.sh", "xtensa-esp8266-none-elf"]

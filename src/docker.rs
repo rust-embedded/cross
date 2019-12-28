@@ -183,14 +183,23 @@ pub fn run(target: &Target,
 
     docker
         .args(&["-e", &format!("CROSS_RUNNER={}", runner.unwrap_or_else(String::new))])
-        .args(&["-v", &format!("{}:/xargo:Z", xargo_dir.display())])
+        .args(&["-v", &format!("{}:/xargo:Z,cached", xargo_dir.display())])
         .args(&["-v", &format!("{}:/cargo:Z", cargo_dir.display())])
         // Prevent `bin` from being mounted inside the Docker container.
         .args(&["-v", "/cargo/bin"])
         .args(&["-v", &format!("{}:/{}:Z", mount_root.display(), mount_root.display())])
         .args(&["-v", &format!("{}:/rust:Z,ro", sysroot.display())])
-        .args(&["-v", &format!("{}:/target:Z", target_dir.display())])
+        .args(&["-v", &format!("{}:/target:Z,delegated", target_dir.display())])
         .args(&["-w", &mount_root.display().to_string()]);
+
+    if let Ok(idf_path) = env::var("IDF_PATH") {
+        docker.args(&["-v", &format!("{}:/esp-idf:Z,delegated", idf_path)]);
+    }
+
+    if let Ok(xargo_rust_src) = env::var("XARGO_RUST_SRC") {
+        docker.args(&["-v", &format!("{}:/xargo-rust-src:Z", xargo_rust_src)]);
+        docker.args(&["-e", "XARGO_RUST_SRC=/xargo-rust-src/src"]);
+    }
 
     if atty::is(Stream::Stdin) {
         docker.arg("-i");
