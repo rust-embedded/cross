@@ -9,9 +9,6 @@ RUN /cmake.sh
 COPY xargo.sh /
 RUN /xargo.sh
 
-COPY xbuild.sh /
-RUN /xbuild.sh
-
 ENV LLVM_XTENSA_PREFIX="/llvm-xtensa"
 
 RUN apt-get update \
