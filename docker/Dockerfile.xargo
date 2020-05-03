@@ -1,0 +1,15 @@
+ARG UBUNTU_VERSION=16.04
+FROM ubuntu:${UBUNTU_VERSION} as xargo
+
+RUN dependencies="ca-certificates curl gcc libc-dev" \
+ && apt-get update \
+ && apt-get install --assume-yes --no-install-recommends ${dependencies} \
+ && export RUSTUP_HOME=/tmp/rustup \
+ && export CARGO_HOME=/tmp/cargo \
+ && curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o rustup-init.sh \
+ && sh rustup-init.sh -y --no-modify-path --profile minimal \
+ && rm rustup-init.sh \
+ && PATH="${CARGO_HOME}/bin:${PATH}" cargo install xargo --root /usr/local \
+ && rm -r "${RUSTUP_HOME}" "${CARGO_HOME}" \
+ && apt-get purge --assume-yes --auto-remove ${dependencies} \
+ && rm -rf /var/lib/apt/lists/*
