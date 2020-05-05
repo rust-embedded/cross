@@ -38,7 +38,7 @@ ENV RUST_XTENSA_SRC=/rust-xtensa-src
 ENV RUST_XTENSA_PREFIX=/rust-xtensa
 
 RUN apt-get update \
- && apt-get install --assume-yes curl libssl-dev \
+ && apt-get install --assume-yes curl libssl-dev python \
  && rm -rf /var/lib/apt/lists/* \
  && git clone --depth 1 -b xtensa-support-master https://github.com/reitermarkus/rust "${RUST_XTENSA_SRC}" \
  && cd "${RUST_XTENSA_SRC}" \
