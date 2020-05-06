@@ -4,6 +4,27 @@ set -euo pipefail
 
 TARGET="${1}"
 
+if [[ -n "${IDF_PATH:-}" ]]; then
+  PIP_CONFIG_FILE="$(mktemp)"
+
+  {
+    echo '[global]'
+    echo 'no-cache-dir = false'
+  } > "${PIP_CONFIG_FILE}"
+
+  export PIP_CONFIG_FILE
+
+  if [[ -z "${IDF_TOOLS_PATH:-}" ]]; then
+    IDF_TOOLS_PATH="$(mktemp)"
+    export IDF_TOOLS_PATH
+  fi
+
+  export PYTHONUSERBASE="${IDF_TOOLS_PATH}/local"
+
+  "${IDF_PATH}/install.sh"
+  . "${IDF_PATH}/export.sh"
+fi
+
 "${@:2}"
 
 export PATH="${PATH}:/rust/bin"

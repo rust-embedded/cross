@@ -193,12 +193,18 @@ pub fn run(target: &Target,
         .args(&["-w", &mount_root.display().to_string()]);
 
     if let Ok(idf_path) = env::var("IDF_PATH") {
-        docker.args(&["-v", &format!("{}:/esp-idf:Z,delegated", idf_path)]);
+        docker.args(&["-v", &format!("{}:{}:Z,delegated", idf_path, idf_path)]);
+        docker.args(&["-e", &format!("IDF_PATH={}", idf_path)]);
+    }
+
+    if let Ok(idf_tools_path) = env::var("IDF_TOOLS_PATH") {
+        docker.args(&["-v", &format!("{}:{}:Z,delegated", idf_tools_path, idf_tools_path)]);
+        docker.args(&["-e", &format!("IDF_TOOLS_PATH={}", idf_tools_path)]);
     }
 
     if let Ok(xargo_rust_src) = env::var("XARGO_RUST_SRC") {
-        docker.args(&["-v", &format!("{}:/xargo-rust-src:Z", xargo_rust_src)]);
-        docker.args(&["-e", "XARGO_RUST_SRC=/xargo-rust-src/src"]);
+        docker.args(&["-v", &format!("{}:{}:Z,delegated", xargo_rust_src, xargo_rust_src)]);
+        docker.args(&["-e", &format!("XARGO_RUST_SRC={}", xargo_rust_src)]);
     }
 
     if atty::is(Stream::Stdin) {
