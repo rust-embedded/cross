@@ -40,7 +40,7 @@ ENV RUST_XTENSA_PREFIX=/rust-xtensa
 RUN apt-get update \
  && apt-get install --assume-yes curl libssl-dev python \
  && rm -rf /var/lib/apt/lists/* \
- && git clone --depth 1 -b xtensa-support-master https://github.com/reitermarkus/rust "${RUST_XTENSA_SRC}" \
+ && git clone --depth 1 --recursive -b xtensa-support-master https://github.com/reitermarkus/rust "${RUST_XTENSA_SRC}" \
  && cd "${RUST_XTENSA_SRC}" \
  && mkdir -p "${RUST_XTENSA_PREFIX}" \
  && ./configure \
@@ -53,7 +53,23 @@ RUN apt-get update \
  && ./x.py build \
  && ./x.py install \
  && ./x.py clean \
- && rm -r build
+ && rm -r build \
+ && git submodule deinit \
+      src/doc/book \
+      src/doc/edition-guide \
+      src/doc/embedded-book \
+      src/doc/nomicon \
+      src/doc/reference \
+      src/doc/rust-by-example \
+      src/doc/rustc-dev-guide \
+      src/llvm-project \
+      src/tools/cargo \
+      src/tools/clippy \
+      src/tools/miri \
+      src/tools/rls \
+      src/tools/rust-installer \
+      src/tools/rustfmt \
+ && rm -rf /var/lib/apt/lists/*
 
 ENV XARGO_RUST_SRC="${RUST_XTENSA_SRC}/src"
 ENV PATH="${RUST_XTENSA_PREFIX}/bin:${LLVM_XTENSA_PREFIX}/bin:$PATH"
