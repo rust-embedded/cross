@@ -22,7 +22,8 @@ if [[ -n "${IDF_PATH:-}" ]]; then
   export PYTHONUSERBASE="${IDF_TOOLS_PATH}/local"
 
   "${IDF_PATH}/install.sh"
-  . "${IDF_PATH}/export.sh"
+  # shellcheck disable=SC1090
+  source "${IDF_PATH}/export.sh"
 fi
 
 "${@:2}"
