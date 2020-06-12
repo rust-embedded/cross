@@ -14,7 +14,7 @@ ENV LLVM_XTENSA_PREFIX="/llvm-xtensa"
 RUN apt-get update \
  && apt-get install --assume-yes --no-install-recommends g++ ninja-build python \
  && export LLVM_XTENSA_SRC=/tmp/llvm-xtensa \
- && git clone --depth 1 -b xtensa_release_9.0.1_with_rust_patches https://github.com/MabezDev/llvm-project.git "${LLVM_XTENSA_SRC}" \
+ && git clone --depth 1 -b xtensa_release_9.0.1_with_rust_patches-31-05-2020 https://github.com/MabezDev/llvm-project.git "${LLVM_XTENSA_SRC}" \
  && cd "${LLVM_XTENSA_SRC}" \
  && mkdir build \
  && cd build \
