@@ -69,6 +69,8 @@ RUN apt-get update \
       src/tools/rls \
       src/tools/rust-installer \
       src/tools/rustfmt \
+ && mkdir -p "${RUST_XTENSA_PREFIX}/lib/rustlib/src" \
+ && ln -s "${RUST_XTENSA_SRC}" "${RUST_XTENSA_PREFIX}/lib/rustlib/src/rust" \
  && rm -rf /var/lib/apt/lists/*
 
 ENV XARGO_RUST_SRC="${RUST_XTENSA_SRC}/src"
