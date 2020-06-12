@@ -40,7 +40,7 @@ ENV RUST_XTENSA_PREFIX=/rust-xtensa
 RUN apt-get update \
  && apt-get install --assume-yes curl libssl-dev python \
  && rm -rf /var/lib/apt/lists/* \
- && git clone --depth 1 --recursive -b xtensa-support-master https://github.com/reitermarkus/rust "${RUST_XTENSA_SRC}" \
+ && git clone --depth 1 --recursive -b xtensa-support-master-backup https://github.com/reitermarkus/rust "${RUST_XTENSA_SRC}" \
  && cd "${RUST_XTENSA_SRC}" \
  && mkdir -p "${RUST_XTENSA_PREFIX}" \
  && ./configure \
