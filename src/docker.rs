@@ -204,7 +204,7 @@ pub fn run(target: &Target,
 
     if let Ok(xargo_rust_src) = env::var("XARGO_RUST_SRC") {
         docker.args(&["-v", &format!("{}:{}:Z,delegated", xargo_rust_src, xargo_rust_src)]);
-        docker.args(&["-e", &format!("XARGO_RUST_SRC={}", xargo_rust_src)]);
+        docker.args(&["-e", &format!("XARGO_RUST_SRC={}/src", xargo_rust_src)]);
     }
 
     if atty::is(Stream::Stdin) {
