@@ -10,7 +10,7 @@ COPY xargo.sh /
 RUN /xargo.sh
 
 ARG LLVM_XTENSA_REPO='https://github.com/MabezDev/llvm-project.git'
-ARG LLVM_XTENSA_BRANCH='xtensa_release_9.0.1_with_rust_patches-31-05-2020'
+ARG LLVM_XTENSA_BRANCH='xtensa_release_9.0.1_with_rust_patches-31-05-2020-cherry-pick'
 ARG LLVM_XTENSA_COMMIT='HEAD'
 ENV LLVM_XTENSA_PREFIX='/llvm-xtensa'
 
