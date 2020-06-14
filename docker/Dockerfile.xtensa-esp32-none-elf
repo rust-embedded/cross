@@ -11,7 +11,6 @@ RUN /xargo.sh
 
 ARG LLVM_XTENSA_REPO='https://github.com/MabezDev/llvm-project.git'
 ARG LLVM_XTENSA_BRANCH='xtensa_release_9.0.1_with_rust_patches-31-05-2020-cherry-pick'
-ARG LLVM_XTENSA_COMMIT='HEAD'
 ENV LLVM_XTENSA_PREFIX='/llvm-xtensa'
 
 RUN apt-get update \
@@ -19,7 +18,6 @@ RUN apt-get update \
  && export LLVM_XTENSA_SRC=/tmp/llvm-xtensa \
  && git clone --depth 1 -b "${LLVM_XTENSA_BRANCH}" "${LLVM_XTENSA_REPO}" "${LLVM_XTENSA_SRC}" \
  && cd "${LLVM_XTENSA_SRC}" \
- && git checkout -B "${LLVM_XTENSA_BRANCH}" "${LLVM_XTENSA_COMMIT}" \
  && mkdir build \
  && cd build \
  && cmake ../llvm \
@@ -40,7 +38,6 @@ RUN apt-get update \
 
 ARG RUST_XTENSA_REPO='https://github.com/reitermarkus/rust'
 ARG RUST_XTENSA_BRANCH='xtensa-support-master-backup'
-ARG RUST_XTENSA_COMMIT='HEAD'
 ENV RUST_XTENSA_SRC=/rust-xtensa-src
 ENV RUST_XTENSA_PREFIX=/rust-xtensa
 
@@ -49,7 +46,6 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/* \
  && git clone --depth 1 --recursive -b "${RUST_XTENSA_BRANCH}" "${RUST_XTENSA_REPO}" "${RUST_XTENSA_SRC}" \
  && cd "${RUST_XTENSA_SRC}" \
- && git checkout -B "${RUST_XTENSA_BRANCH}" "${RUST_XTENSA_COMMIT}" \
  && mkdir -p "${RUST_XTENSA_PREFIX}" \
  && ./configure \
       --enable-lld \
