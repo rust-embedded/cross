@@ -37,7 +37,7 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 
 ARG RUST_XTENSA_REPO='https://github.com/reitermarkus/rust'
-ARG RUST_XTENSA_BRANCH='xtensa-support-master-backup'
+ARG RUST_XTENSA_BRANCH='xtensa-support-master'
 ENV RUST_XTENSA_SRC=/rust-xtensa-src
 ENV RUST_XTENSA_PREFIX=/rust-xtensa
 
