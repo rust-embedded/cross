@@ -9,12 +9,14 @@ RUN /cmake.sh
 COPY xargo.sh /
 RUN /xargo.sh
 
-ENV LLVM_XTENSA_PREFIX="/llvm-xtensa"
+ARG LLVM_XTENSA_REPO='https://github.com/MabezDev/llvm-project.git'
+ARG LLVM_XTENSA_BRANCH='xtensa_release_9.0.1_with_rust_patches-31-05-2020-cherry-pick'
+ENV LLVM_XTENSA_PREFIX='/llvm-xtensa'
 
 RUN apt-get update \
  && apt-get install --assume-yes --no-install-recommends g++ ninja-build python \
  && export LLVM_XTENSA_SRC=/tmp/llvm-xtensa \
- && git clone --depth 1 -b xtensa_release_9.0.1_with_rust_patches https://github.com/MabezDev/llvm-project.git "${LLVM_XTENSA_SRC}" \
+ && git clone --depth 1 -b "${LLVM_XTENSA_BRANCH}" "${LLVM_XTENSA_REPO}" "${LLVM_XTENSA_SRC}" \
  && cd "${LLVM_XTENSA_SRC}" \
  && mkdir build \
  && cd build \
@@ -34,13 +36,15 @@ RUN apt-get update \
  && rm -r "${LLVM_XTENSA_SRC}" \
  && rm -rf /var/lib/apt/lists/*
 
+ARG RUST_XTENSA_REPO='https://github.com/reitermarkus/rust'
+ARG RUST_XTENSA_BRANCH='xtensa-support-master'
 ENV RUST_XTENSA_SRC=/rust-xtensa-src
 ENV RUST_XTENSA_PREFIX=/rust-xtensa
 
 RUN apt-get update \
- && apt-get install --assume-yes curl libssl-dev \
+ && apt-get install --assume-yes curl libssl-dev python \
  && rm -rf /var/lib/apt/lists/* \
- && git clone --depth 1 -b xtensa-support-master https://github.com/reitermarkus/rust "${RUST_XTENSA_SRC}" \
+ && git clone --depth 1 --recursive -b "${RUST_XTENSA_BRANCH}" "${RUST_XTENSA_REPO}" "${RUST_XTENSA_SRC}" \
  && cd "${RUST_XTENSA_SRC}" \
  && mkdir -p "${RUST_XTENSA_PREFIX}" \
  && ./configure \
@@ -53,7 +57,25 @@ RUN apt-get update \
  && ./x.py build \
  && ./x.py install \
  && ./x.py clean \
- && rm -r build
+ && rm -r build \
+ && git submodule deinit \
+      src/doc/book \
+      src/doc/edition-guide \
+      src/doc/embedded-book \
+      src/doc/nomicon \
+      src/doc/reference \
+      src/doc/rust-by-example \
+      src/doc/rustc-dev-guide \
+      src/llvm-project \
+      src/tools/cargo \
+      src/tools/clippy \
+      src/tools/miri \
+      src/tools/rls \
+      src/tools/rust-installer \
+      src/tools/rustfmt \
+ && mkdir -p "${RUST_XTENSA_PREFIX}/lib/rustlib/src" \
+ && ln -s "${RUST_XTENSA_SRC}" "${RUST_XTENSA_PREFIX}/lib/rustlib/src/rust" \
+ && rm -rf /var/lib/apt/lists/*
 
 ENV XARGO_RUST_SRC="${RUST_XTENSA_SRC}/src"
 ENV PATH="${RUST_XTENSA_PREFIX}/bin:${LLVM_XTENSA_PREFIX}/bin:$PATH"
