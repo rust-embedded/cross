@@ -39,9 +39,18 @@ case "${TARGET}" in
     ;;
 esac
 
-binary_targets="$(cargo metadata --format-version 1 | jq -c '.workspace_members as $members | .packages | map(select(.id as $id | $members[] | contains($id) )) | map(.targets)[] | map(select(.kind[] | contains("bin")))[] | .name' -r)"
+mapfile -t binary_targets < <(
+  cargo metadata --format-version 1 \
+  | jq -c '
+      .workspace_members as $members | .packages
+      | map(select(.id as $id | $members[] | contains($id) ))
+      | map(.targets)[] | map(select(.kind[] | contains("bin") or contains("example")))[]
+      | .name
+    ' -r
+)
+
 for binary_target in "${binary_targets[@]}"; do
-  for t in "${CARGO_TARGET_DIR}"/${TARGET}/{release,debug}/"${binary_target}"; do
+  for t in "${CARGO_TARGET_DIR}"/${TARGET}/{release,debug}/{,examples/}"${binary_target}"; do
     if [[ -f "${t}" ]]; then
       "${IDF_PATH}/components/esptool_py/esptool/esptool.py" \
         --chip "${CHIP}" \
