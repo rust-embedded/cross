@@ -85,22 +85,17 @@ RUN apt-get update \
     git \
     wget \
     libncurses-dev \
+    libusb-1.0 \
     flex \
     bison \
     gperf \
     python \
     python-pip \
+    python-setuptools \
     ninja-build \
     ccache \
     jq \
  && rm -rf /var/lib/apt/lists/*
-
-ARG IDF_VERSION='release/v3.3'
-ENV IDF_PATH=/esp-idf
-RUN git clone -b "${IDF_VERSION}" --depth 1 --recursive https://github.com/espressif/ESP8266_RTOS_SDK "${IDF_PATH}" \
- && git -C "${IDF_PATH}" checkout --recurse-submodules "${IDF_VERSION}" \
- && pip install -r "${IDF_PATH}/requirements.txt" \
- && chmod -R 0777 "${IDF_PATH}"
 
 ARG ESP_VERSION="1.22.0-100-ge567ec7-5.2.0"
 ENV ESP_PATH=/esp
