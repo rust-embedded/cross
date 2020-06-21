@@ -7,9 +7,11 @@ TARGET="${1}"
 case "${TARGET}" in
   xtensa-esp32-none-elf)
     CHIP=esp32
+    ELF2IMAGE_VERSION=2
     ;;
   xtensa-esp8266-none-elf)
     CHIP=esp8266
+    ELF2IMAGE_VERSION=3
     ;;
 esac
 
@@ -62,6 +64,7 @@ for binary_target in "${binary_targets[@]}"; do
       "${IDF_PATH}/components/esptool_py/esptool/esptool.py" \
         --chip "${CHIP}" \
         elf2image \
+        --version "${ELF2IMAGE_VERSION}" \
         -o "${t}.bin" \
         "${t}" | tail -n +2
     fi
