@@ -32,14 +32,28 @@ if [[ -n "${IDF_PATH:-}" ]]; then
 
   export PYTHONUSERBASE="${IDF_TOOLS_PATH}/local"
 
+  idf_version="$(git -C "${IDF_PATH}" rev-parse HEAD)"
+  version_file="${IDF_TOOLS_PATH}/installed_version"
+
+  if ! [[ -f "${version_file}" ]] || [[ "${idf_version}" != "$(cat "${version_file}")" ]]; then
+    case "${CHIP}" in
+      esp32)
+        "${IDF_PATH}/install.sh"
+        ;;
+      esp8266)
+        python -m pip install --user -r "${IDF_PATH}/requirements.txt"
+        ;;
+    esac
+
+    echo "${idf_version}" > "${version_file}"
+  fi
+
   case "${CHIP}" in
     esp32)
-      "${IDF_PATH}/install.sh"
       # shellcheck disable=SC1090
-      source "${IDF_PATH}/export.sh"
+      source "${IDF_PATH}/export.sh" >/dev/null
       ;;
     esp8266)
-      python -m pip install --user -r "${IDF_PATH}/requirements.txt"
       ;;
   esac
 fi
