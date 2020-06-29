@@ -32,7 +32,7 @@ if [[ -n "${IDF_PATH:-}" ]]; then
 
   export PYTHONUSERBASE="${IDF_TOOLS_PATH}/local"
 
-  idf_version="$(git -C "${IDF_PATH}" rev-parse HEAD)"
+  idf_version="$(git -C "${IDF_PATH}" rev-parse HEAD 2>/dev/null || true)"
   version_file="${IDF_TOOLS_PATH}/installed_version"
 
   if ! [[ -f "${version_file}" ]] || [[ "${idf_version}" != "$(cat "${version_file}")" ]]; then
@@ -45,7 +45,9 @@ if [[ -n "${IDF_PATH:-}" ]]; then
         ;;
     esac
 
-    echo "${idf_version}" > "${version_file}"
+    if [[ -n "${idf_version:-}" ]]; then
+      echo "${idf_version}" > "${version_file}"
+    fi
   fi
 
   case "${CHIP}" in
