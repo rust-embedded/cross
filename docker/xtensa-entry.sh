@@ -26,7 +26,7 @@ if [[ -n "${IDF_PATH:-}" ]]; then
   export PIP_CONFIG_FILE
 
   if [[ -z "${IDF_TOOLS_PATH:-}" ]]; then
-    IDF_TOOLS_PATH="$(mktemp)"
+    IDF_TOOLS_PATH="$(mktemp -d)"
     export IDF_TOOLS_PATH
   fi
 
