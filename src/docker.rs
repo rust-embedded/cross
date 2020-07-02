@@ -192,16 +192,6 @@ pub fn run(target: &Target,
         .args(&["-v", &format!("{}:/target:Z,delegated", target_dir.display())])
         .args(&["-w", &mount_root.display().to_string()]);
 
-    if let Ok(idf_path) = env::var("IDF_PATH") {
-        docker.args(&["-v", &format!("{}:{}:Z,delegated", idf_path, idf_path)]);
-        docker.args(&["-e", &format!("IDF_PATH={}", idf_path)]);
-    }
-
-    if let Ok(idf_tools_path) = env::var("IDF_TOOLS_PATH") {
-        docker.args(&["-v", &format!("{}:{}:Z,delegated", idf_tools_path, idf_tools_path)]);
-        docker.args(&["-e", &format!("IDF_TOOLS_PATH={}", idf_tools_path)]);
-    }
-
     if let Ok(xargo_rust_src) = env::var("XARGO_RUST_SRC") {
         docker.args(&["-v", &format!("{}:{}:Z,delegated", xargo_rust_src, xargo_rust_src)]);
         docker.args(&["-e", &format!("XARGO_RUST_SRC={}/src", xargo_rust_src)]);
