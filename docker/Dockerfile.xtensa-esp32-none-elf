@@ -97,5 +97,8 @@ RUN apt-get update \
     jq \
  && rm -rf /var/lib/apt/lists/*
 
+COPY cargo.sh /
+RUN /cargo.sh
+
 COPY xtensa-entry.sh /
 ENTRYPOINT ["/xtensa-entry.sh", "xtensa-esp32-none-elf"]
