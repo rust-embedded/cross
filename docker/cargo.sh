@@ -25,7 +25,7 @@ main() {
     sh rustup-init.sh -y --no-modify-path --profile minimal
     rm rustup-init.sh
 
-    PATH="${CARGO_HOME}/bin:${PATH}" cargo install --git https://github.com/reitermarkus/cargo --branch linkarg --root /usr/local
+    PATH="${CARGO_HOME}/bin:${PATH}" cargo install --git https://github.com/reitermarkus/cargo --branch linkarg --root /usr/local cargo
 
     rm -r "${RUSTUP_HOME}" "${CARGO_HOME}"
 
