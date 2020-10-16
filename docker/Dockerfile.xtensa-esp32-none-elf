@@ -9,14 +9,14 @@ RUN /cmake.sh
 COPY xargo.sh /
 RUN /xargo.sh
 
-ARG LLVM_XTENSA_REPO='https://github.com/MabezDev/llvm-project.git'
-ARG LLVM_XTENSA_BRANCH='xtensa_release_9.0.1_with_rust_patches-31-05-2020-cherry-pick'
+ARG LLVM_XTENSA_REPO='https://github.com/espressif/llvm-project.git'
+ARG LLVM_XTENSA_BRANCH='xtensa_release_10.0.1'
 ENV LLVM_XTENSA_PREFIX='/llvm-xtensa'
 
 RUN apt-get update \
  && apt-get install --assume-yes --no-install-recommends g++ ninja-build python \
  && export LLVM_XTENSA_SRC=/tmp/llvm-xtensa \
- && git clone --depth 1 -b "${LLVM_XTENSA_BRANCH}" "${LLVM_XTENSA_REPO}" "${LLVM_XTENSA_SRC}" \
+ && git clone --depth 1 --recursive -b "${LLVM_XTENSA_BRANCH}" "${LLVM_XTENSA_REPO}" "${LLVM_XTENSA_SRC}" \
  && cd "${LLVM_XTENSA_SRC}" \
  && mkdir build \
  && cd build \
@@ -37,7 +37,7 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 
 ARG RUST_XTENSA_REPO='https://github.com/reitermarkus/rust'
-ARG RUST_XTENSA_BRANCH='xtensa-support-master'
+ARG RUST_XTENSA_BRANCH='xtensa-support-master-new'
 ENV RUST_XTENSA_SRC=/rust-xtensa-src
 ENV RUST_XTENSA_PREFIX=/rust-xtensa
 
