@@ -73,8 +73,11 @@ impl Root {
 }
 
 /// Cargo project root
-pub fn root() -> Result<Option<Root>> {
-    let cd = env::current_dir().chain_err(|| "couldn't get current directory")?;
+pub fn root(project_dir: Option<PathBuf>) -> Result<Option<Root>> {
+    let cd = match project_dir {
+        Some(dir) => dir,
+        None => env::current_dir().chain_err(|| "couldn't get project directory")?,
+    };
 
     let mut dir = &*cd;
     loop {
