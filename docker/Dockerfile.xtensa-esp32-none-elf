@@ -1,6 +1,6 @@
 FROM ubuntu:18.04
 
-COPY common.sh /
+COPY common.sh lib.sh /
 RUN /common.sh
 
 COPY cmake.sh /
@@ -10,7 +10,7 @@ COPY xargo.sh /
 RUN /xargo.sh
 
 ARG LLVM_XTENSA_REPO='https://github.com/espressif/llvm-project.git'
-ARG LLVM_XTENSA_BRANCH='xtensa_release_10.0.1'
+ARG LLVM_XTENSA_BRANCH='xtensa_release_11.0.0'
 ENV LLVM_XTENSA_PREFIX='/llvm-xtensa'
 
 RUN apt-get update \
@@ -37,7 +37,7 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 
 ARG RUST_XTENSA_REPO='https://github.com/reitermarkus/rust'
-ARG RUST_XTENSA_BRANCH='xtensa-support-master-new'
+ARG RUST_XTENSA_BRANCH='xtensa-support'
 ENV RUST_XTENSA_SRC=/rust-xtensa-src
 ENV RUST_XTENSA_PREFIX=/rust-xtensa
 
