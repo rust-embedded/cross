@@ -219,7 +219,7 @@ fn run() -> Result<ExitStatus> {
         args.all.iter().any(|a| a == "--verbose" || a == "-v" || a == "-vv");
 
     let version_meta = rustc_version::version_meta().chain_err(|| "couldn't fetch the `rustc` version")?;
-    if let Some(root) = cargo::root(args.project_dir)? {
+    if let Some(root) = cargo::root(args.manifest_path)? {
         let host = version_meta.host();
 
         if host.is_supported(args.target.as_ref()) {
