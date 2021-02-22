@@ -6,7 +6,7 @@ set -euo pipefail
 main() {
     # arch in the rust target
     local arch="${1}" \
-          kversion=4.19.0-10
+          kversion=4.19.0-11
 
     local debsource="deb http://http.debian.net/debian/ buster main"
     debsource="${debsource}\ndeb http://security.debian.org/ buster/updates main"
@@ -51,6 +51,7 @@ main() {
             echo "APT::Get::AllowUnauthenticated true;" | tee -a /etc/apt/apt.conf.d/10-nocheckvalid
 
             dropbear="dropbear"
+            deps=(libcrypt1:"${arch}")
             ;;
         powerpc64)
             # there is no stable port
@@ -61,7 +62,7 @@ main() {
             debsource="deb http://ftp.ports.debian.org/debian-ports unstable main"
             debsource="${debsource}\ndeb http://ftp.ports.debian.org/debian-ports unreleased main"
             # sid version of dropbear requires these dependencies
-            deps=(libtommath1:ppc64 libtomcrypt1:ppc64 libgmp10:ppc64 libcrypt1:ppc64)
+            deps=(libcrypt1:"${arch}")
             ;;
         powerpc64le)
             arch=ppc64el
@@ -79,7 +80,7 @@ main() {
             debsource="deb http://ftp.ports.debian.org/debian-ports unstable main"
             debsource="${debsource}\ndeb http://ftp.ports.debian.org/debian-ports unreleased main"
             # sid version of dropbear requires these dependencies
-            deps=(libtommath1:sparc64 libtomcrypt1:sparc64 libgmp10:sparc64 libcrypt1:sparc64)
+            deps=(libcrypt1:"${arch}")
             ;;
         x86_64)
             arch=amd64
@@ -92,6 +93,8 @@ main() {
     esac
 
     local dependencies=(
+        ca-certificates
+        curl
         cpio
         sharutils
         gnupg
@@ -100,7 +103,7 @@ main() {
     local purge_list=()
     apt-get update
     for dep in "${dependencies[@]}"; do
-        if ! dpkg -L "${dep}"; then
+        if ! dpkg -L "${dep}" >/dev/null 2>/dev/null; then
             apt-get install --assume-yes --no-install-recommends "${dep}"
             purge_list+=( "${dep}" )
         fi
@@ -137,6 +140,9 @@ main() {
         ${deps[@]+"${deps[@]}"} \
         "busybox:${arch}" \
         "${dropbear}:${arch}" \
+        "libtommath1:${arch}" \
+        "libtomcrypt1:${arch}" \
+        "libgmp10:${arch}" \
         "libc6:${arch}" \
         "${libgcc}:${arch}" \
         "libstdc++6:${arch}" \
