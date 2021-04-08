@@ -6,7 +6,7 @@ set -euo pipefail
 main() {
     local arch="${1}"
 
-    local base_release=12.1 \
+    local base_release=12.2 \
           binutils=2.32 \
           gcc=6.4.0 \
           target="${arch}-unknown-freebsd12"
@@ -78,6 +78,9 @@ main() {
     cp "${td}/freebsd/usr/lib"/lib{c,util,m}.a "${destdir}/lib"
     cp "${td}/freebsd/usr/lib"/lib{rt,execinfo}.so.1 "${destdir}/lib"
     cp "${td}/freebsd/usr/lib"/{crt1,Scrt1,crti,crtn}.o "${destdir}/lib"
+    cp "${td}/freebsd/usr/lib"/lib{crypto,ssl}.a "${destdir}/lib"
+    cp "${td}/freebsd/usr/lib"/libssl.so.111 "${destdir}/lib"
+    cp "${td}/freebsd/usr/lib"/lib{crypto,ssl}.so "${destdir}/lib"
 
     ln -s libc.so.7 "${destdir}/lib/libc.so"
     ln -s libc++.so.1 "${destdir}/lib/libc++.so"
