@@ -32,7 +32,9 @@ pub fn docker_command(subcommand: &str) -> Result<Command> {
     if let Ok(ce) = get_container_engine() {
         let mut command = Command::new(ce);
         command.arg(subcommand);
-        command.args(&["--userns", "host"]);
+        if subcommand != "build" {
+            command.args(&["--userns", "host"]);
+        }
         Ok(command)
     } else {
         Err("no container engine found; install docker or podman".into())
@@ -200,15 +202,63 @@ pub fn run(target: &Target,
     }
 
     docker
-        .arg(&image(toml, target)?)
+        .arg(&image(toml, target, verbose)?)
         .args(&["sh", "-c", &format!("PATH=$PATH:/rust/bin {:?}", cmd)])
         .run_and_get_status(verbose)
 }
 
-pub fn image(toml: Option<&Toml>, target: &Target) -> Result<String> {
+fn build_docker_image(toml: &Toml, target: &Target, verbose: bool) -> Result<String> {
+    let mut image_id_filename = std::env::temp_dir();
+    image_id_filename.push(format!("{}.iid", std::process::id()));
+
+    let mut docker = docker_command("build")?;
+    docker
+        .arg(toml.context(target)?.map(|s| s.to_owned()).unwrap())
+        .args(&["--iidfile", &image_id_filename.clone().into_os_string().into_string().unwrap()]);
+    if let Some(dockerfile) = toml.dockerfile(target)? {
+        docker.args(&["-f", dockerfile]);
+    }
+    if let Some(args) = toml.args(target)? {
+        for (key, value) in args.iter() {
+            match value {
+                toml::Value::String(val) => {
+                    docker.args(&["--build-arg", &format!("{}={}", key, val)]);
+                },
+                toml::Value::Integer(val) => {
+                    docker.args(&["--build-arg", &format!("{}={}", key, val)]);
+                },
+                _ => Err(format!("target.{}.args.{} must be a string or number", target.triple(), key))?
+            }
+        }
+    }
+    if verbose {
+        docker.run(verbose)?;
+    } else {
+        docker.run_and_get_stdout(verbose)?;
+    }
+    let mut image_id = std::fs::read_to_string(&image_id_filename)?;
+    image_id.retain(|c| c != '\n');
+    std::fs::remove_file(&image_id_filename).unwrap_or_else(
+        |e| eprintln!(
+            "Error removing tempfile {:?}: {:?}. Ignoring.",
+            image_id_filename, e));
+    Ok(image_id)
+}
+
+pub fn image(toml: Option<&Toml>, target: &Target, verbose: bool) -> Result<String> {
     if let Some(toml) = toml {
-        if let Some(image) = toml.image(target)?.map(|s| s.to_owned()) {
-            return Ok(image)
+        match (toml.image(target)?, toml.context(target)?) {
+            (Some(_image), Some(_context)) => {
+                // https://github.com/compose-spec/compose-spec/blob/master/build.md says:
+                //     Without any explicit user directives, Compose implementation with
+                //     Build support MUST first try to pull Image, then build from source
+                //     if image was not found on registry.
+                // This is not supported yet, so the best thing to do is to explode.
+                bail!("Specifying `image` and `context` in Cross.toml is not yet supported.")
+            },
+            (Some(image), None) => return Ok(image.to_owned()),
+            (None, Some(_context)) => return build_docker_image(toml, target, verbose),
+            (None, None) => (),
         }
     }
 
