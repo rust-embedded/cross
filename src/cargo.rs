@@ -1,3 +1,4 @@
+use error_chain::bail;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitStatus};
 use std::{env, fs};
@@ -73,24 +74,35 @@ impl Root {
 }
 
 /// Cargo project root
-pub fn root() -> Result<Option<Root>> {
-    let cd = env::current_dir().chain_err(|| "couldn't get current directory")?;
-
-    let mut dir = &*cd;
-    loop {
-        let toml = dir.join("Cargo.toml");
-
-        if fs::metadata(&toml).is_ok() {
-            return Ok(Some(Root { path: dir.to_owned() }));
+pub fn root(manifest_path: Option<PathBuf>) -> Result<Option<Root>> {
+    if let Some(cargo_path) = manifest_path {
+        if !cargo_path.is_file() {
+            bail!("No manifest found at \"{}\"", cargo_path.display());
         }
+        return Ok(Some(Root {
+            path: cargo_path
+                .parent()
+                .expect("File must have a parent")
+                .to_owned(),
+        }));
+    } else {
+        let cd = env::current_dir().chain_err(|| "couldn't get current directory")?;
+        let mut dir = &*cd;
+        loop {
+            let toml = dir.join("Cargo.toml");
 
-        match dir.parent() {
-            Some(p) => dir = p,
-            None => break,
+            if fs::metadata(&toml).is_ok() {
+                return Ok(Some(Root {
+                    path: dir.to_owned(),
+                }));
+            }
+            if let Some(p) = dir.parent() {
+                dir = p;
+            } else {
+                break Ok(None);
+            }
         }
     }
-
-    Ok(None)
 }
 
 /// Pass-through mode
