@@ -263,7 +263,7 @@ fn run() -> Result<ExitStatus> {
         args.all.iter().any(|a| a == "--verbose" || a == "-v" || a == "-vv");
 
     let version_meta = rustc_version::version_meta().chain_err(|| "couldn't fetch the `rustc` version")?;
-    if let Some(root) = cargo::root()? {
+    if let Some(root) = cargo::root(args.project_dir)? {
         let host = version_meta.host();
 
         if host.is_supported(args.target.as_ref()) {
@@ -353,6 +353,7 @@ fn run() -> Result<ExitStatus> {
                                    &filtered_args,
                                    &args.target_dir,
                                    &root,
+                                   env::current_dir().expect("couldn't get project directory"),
                                    toml.as_ref(),
                                    uses_xargo,
                                    &sysroot,
@@ -364,7 +365,6 @@ fn run() -> Result<ExitStatus> {
 
     cargo::run(&args.all, verbose)
 }
-
 
 /// Parsed `Cross.toml`
 #[derive(Debug)]

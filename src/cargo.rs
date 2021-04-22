@@ -1,6 +1,6 @@
+use std::{env, fs};
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitStatus};
-use std::{env, fs};
 
 use crate::errors::*;
 use crate::extensions::CommandExt;
@@ -27,7 +27,7 @@ impl Subcommand {
             _ => true,
         }
     }
-
+    
     pub fn needs_interpreter(self) -> bool {
         match self {
             Subcommand::Run | Subcommand::Test | Subcommand::Bench => true,
@@ -73,23 +73,28 @@ impl Root {
 }
 
 /// Cargo project root
-pub fn root() -> Result<Option<Root>> {
-    let cd = env::current_dir().chain_err(|| "couldn't get current directory")?;
-
+pub fn root(project_dir: Option<PathBuf>) -> Result<Option<Root>> {
+    let cd = match project_dir {
+        Some(dir) => dir,
+        None => {
+            env::current_dir().chain_err(|| "couldn't get project directory")?
+        }
+    };
+    
     let mut dir = &*cd;
     loop {
         let toml = dir.join("Cargo.toml");
-
+        
         if fs::metadata(&toml).is_ok() {
             return Ok(Some(Root { path: dir.to_owned() }));
         }
-
+        
         match dir.parent() {
             Some(p) => dir = p,
             None => break,
         }
     }
-
+    
     Ok(None)
 }
 
