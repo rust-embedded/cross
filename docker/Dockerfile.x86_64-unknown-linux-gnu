@@ -1,4 +1,4 @@
-FROM ubuntu:16.04
+FROM ubuntu:20.04
 
 COPY linux-image.sh /
 RUN /linux-image.sh x86_64
