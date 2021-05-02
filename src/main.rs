@@ -322,7 +322,7 @@ fn run() -> Result<ExitStatus> {
                     false
                 },
             };
-            
+
             let filtered_args = if args.subcommand.map_or(false, |s| !s.needs_target_in_command()) {
                 let mut filtered_args = Vec::new();
                 let mut args_iter = args.all.clone().into_iter();
