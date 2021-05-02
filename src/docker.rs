@@ -136,7 +136,7 @@ pub fn run(target: &Target,
             if let Ok(val) = env::var(var) {
                 let host_path = Path::new(&val).canonicalize()?;
                 let mount_path = &host_path;
-                docker.args(&["-v", &format!("{}:{}", host_path.display(), mount_path.display())]);
+                docker.args(&["-v", &format!("{}:{}:Z,delegated", host_path.display(), mount_path.display())]);
                 docker.args(&["-e", &format!("{}={}", var, mount_path.display())]);
             }
         }
@@ -183,14 +183,19 @@ pub fn run(target: &Target,
 
     docker
         .args(&["-e", &format!("CROSS_RUNNER={}", runner.unwrap_or_else(String::new))])
-        .args(&["-v", &format!("{}:/xargo:Z", xargo_dir.display())])
-        .args(&["-v", &format!("{}:/cargo:Z", cargo_dir.display())])
+        .args(&["-v", &format!("{}:/xargo:Z,delegated", xargo_dir.display())])
+        .args(&["-v", &format!("{}:/cargo:Z,delegated", cargo_dir.display())])
         // Prevent `bin` from being mounted inside the Docker container.
         .args(&["-v", "/cargo/bin"])
-        .args(&["-v", &format!("{}:/{}:Z", mount_root.display(), mount_root.display())])
+        .args(&["-v", &format!("{}:/{}:Z,delegated", mount_root.display(), mount_root.display())])
         .args(&["-v", &format!("{}:/rust:Z,ro", sysroot.display())])
-        .args(&["-v", &format!("{}:/target:Z", target_dir.display())])
+        .args(&["-v", &format!("{}:/target:Z,delegated", target_dir.display())])
         .args(&["-w", &mount_root.display().to_string()]);
+
+    if let Ok(xargo_rust_src) = env::var("XARGO_RUST_SRC") {
+        docker.args(&["-v", &format!("{}:{}:Z,delegated", xargo_rust_src, xargo_rust_src)]);
+        docker.args(&["-e", &format!("XARGO_RUST_SRC={}/src", xargo_rust_src)]);
+    }
 
     if atty::is(Stream::Stdin) {
         docker.arg("-i");

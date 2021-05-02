@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+
+set -x
+set -euo pipefail
+
+main() {
+    local dependencies=(
+        ca-certificates
+        curl
+    )
+
+    apt-get update
+    local purge_list=()
+    for dep in "${dependencies[@]}"; do
+        if ! dpkg -L "${dep}"; then
+            apt-get install --assume-yes --no-install-recommends "${dep}"
+            purge_list+=( "${dep}" )
+        fi
+    done
+
+    export RUSTUP_HOME=/tmp/rustup
+    export CARGO_HOME=/tmp/cargo
+
+    curl --retry 3 -sSfL https://sh.rustup.rs -o rustup-init.sh
+    sh rustup-init.sh -y --no-modify-path --profile minimal
+    rm rustup-init.sh
+
+    PATH="${CARGO_HOME}/bin:${PATH}" cargo install --git https://github.com/rust-lang/cargo --root /usr/local cargo
+
+    rm -r "${RUSTUP_HOME}" "${CARGO_HOME}"
+
+    if (( ${#purge_list[@]} )); then
+      apt-get purge --assume-yes --auto-remove "${purge_list[@]}"
+    fi
+
+    rm "${0}"
+}
+
+main "${@}"

@@ -1,5 +1,8 @@
 use std::process::Command;
 
+use error_chain::bail;
+use semver::Version;
+
 use crate::Target;
 use crate::errors::*;
 use crate::extensions::CommandExt;
@@ -31,6 +34,18 @@ pub fn installed_toolchains(verbose: bool) -> Result<Vec<String>> {
     Ok(out.lines().map(|l| l.replace(" (default)", "").replace(" (override)", "").trim().to_owned()).collect())
 }
 
+fn version(verbose: bool) -> Result<Version> {
+    let out = Command::new("rustup")
+        .arg("-V")
+        .run_and_get_stdout(verbose)?;
+
+    if let Some(version) = out.lines().next().and_then(|line| line.split_whitespace().nth(1)) {
+        return Ok(Version::parse(version).chain_err(|| "failed to parse rustup version")?)
+    }
+
+    bail!("failed to get rustup version")
+}
+
 pub fn available_targets(toolchain: &str, verbose: bool) -> Result<AvailableTargets> {
     let out = Command::new("rustup")
         .args(&["target", "list", "--toolchain", toolchain])
@@ -56,10 +71,17 @@ pub fn available_targets(toolchain: &str, verbose: bool) -> Result<AvailableTarg
 }
 
 pub fn install_toolchain(toolchain: &str, verbose: bool) -> Result<()> {
-    Command::new("rustup")
-        .args(&["toolchain", "add", toolchain])
-        .run(verbose)
-        .chain_err(|| format!("couldn't install toolchain `{}`", toolchain))
+    let mut command = Command::new("rustup");
+    command.args(&["toolchain", "install"]);
+
+    if version(verbose)? >= Version::parse("1.24.0").unwrap() {
+        command.arg("--force-non-host");
+    }
+
+    command.arg(toolchain);
+
+    command.run(verbose)
+           .chain_err(|| format!("couldn't install toolchain `{}`", toolchain))
 }
 
 pub fn install(target: &Target, toolchain: &str, verbose: bool) -> Result<()> {

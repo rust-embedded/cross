@@ -1,0 +1,105 @@
+FROM ubuntu:20.04
+
+COPY common.sh lib.sh /
+RUN /common.sh
+
+COPY cmake.sh /
+RUN /cmake.sh
+
+COPY xargo.sh /
+RUN /xargo.sh
+
+ARG LLVM_XTENSA_REPO='https://github.com/espressif/llvm-project.git'
+ARG LLVM_XTENSA_BRANCH='xtensa_release_11.0.0'
+ENV LLVM_XTENSA_PREFIX='/llvm-xtensa'
+
+RUN apt-get update \
+ && apt-get install --assume-yes --no-install-recommends g++ ninja-build python3 \
+ && export LLVM_XTENSA_SRC=/tmp/llvm-xtensa \
+ && git clone --depth 1 --recursive -b "${LLVM_XTENSA_BRANCH}" "${LLVM_XTENSA_REPO}" "${LLVM_XTENSA_SRC}" \
+ && cd "${LLVM_XTENSA_SRC}" \
+ && mkdir build \
+ && cd build \
+ && cmake ../llvm \
+      -G Ninja \
+      -DLLVM_TARGETS_TO_BUILD=X86 \
+      -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=Xtensa \
+      -DLLVM_ENABLE_PROJECTS='clang;lld' \
+      -DLLVM_INSTALL_UTILS=ON \
+      -DLLVM_INCLUDE_BENCHMARKS=OFF \
+      -DLLVM_INCLUDE_DOCS=OFF \
+      -DLLVM_INCLUDE_EXAMPLES=OFF \
+      -DLLVM_INCLUDE_TESTS=OFF \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_INSTALL_PREFIX="${LLVM_XTENSA_PREFIX}" \
+ && cmake --build . --target install \
+ && rm -r "${LLVM_XTENSA_SRC}" \
+ && rm -rf /var/lib/apt/lists/*
+
+ARG RUST_XTENSA_REPO='https://github.com/reitermarkus/rust'
+ARG RUST_XTENSA_BRANCH='xtensa-support'
+ENV RUST_XTENSA_SRC=/rust-xtensa-src
+ENV RUST_XTENSA_PREFIX=/rust-xtensa
+
+RUN apt-get update \
+ && apt-get install --assume-yes curl libssl-dev python3 \
+ && rm -rf /var/lib/apt/lists/* \
+ && git clone --depth 1 --recursive -b "${RUST_XTENSA_BRANCH}" "${RUST_XTENSA_REPO}" "${RUST_XTENSA_SRC}" \
+ && cd "${RUST_XTENSA_SRC}" \
+ && mkdir -p "${RUST_XTENSA_PREFIX}" \
+ && ./configure \
+      --enable-lld \
+      --disable-docs \
+      --disable-compiler-docs \
+      --llvm-root="${LLVM_XTENSA_PREFIX}" \
+      --prefix="${RUST_XTENSA_PREFIX}" \
+      --release-channel=nightly \
+ && python3 ./x.py build \
+ && python3 ./x.py install \
+ && python3 ./x.py clean \
+ && rm -r build \
+ && git submodule deinit \
+      src/doc/book \
+      src/doc/edition-guide \
+      src/doc/embedded-book \
+      src/doc/nomicon \
+      src/doc/reference \
+      src/doc/rust-by-example \
+      src/doc/rustc-dev-guide \
+      src/llvm-project \
+      src/tools/cargo \
+      src/tools/clippy \
+      src/tools/miri \
+      src/tools/rls \
+      src/tools/rust-installer \
+      src/tools/rustfmt \
+ && mkdir -p "${RUST_XTENSA_PREFIX}/lib/rustlib/src" \
+ && ln -s "${RUST_XTENSA_SRC}" "${RUST_XTENSA_PREFIX}/lib/rustlib/src/rust" \
+ && rm -rf /var/lib/apt/lists/*
+
+ENV XARGO_RUST_SRC="${RUST_XTENSA_SRC}/src"
+ENV PATH="${RUST_XTENSA_PREFIX}/bin:${LLVM_XTENSA_PREFIX}/bin:$PATH"
+
+RUN apt-get update \
+ && apt-get install --assume-yes \
+    git \
+    wget \
+    libncurses-dev \
+    libusb-1.0 \
+    flex \
+    bison \
+    gperf \
+    python3 \
+    python3-pip \
+    python3-setuptools \
+    ninja-build \
+    ccache \
+    jq \
+ && rm -rf /var/lib/apt/lists/* \
+ && update-alternatives --install /usr/bin/python python /usr/bin/python3 10
+
+COPY cargo.sh /
+RUN /cargo.sh
+
+COPY xtensa-entry.sh /
+ENTRYPOINT ["/xtensa-entry.sh", "xtensa-esp32-none-elf"]
