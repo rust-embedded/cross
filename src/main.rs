@@ -12,6 +12,7 @@ mod rustc;
 mod rustup;
 
 use std::io::Write;
+use std::path::PathBuf;
 use std::process::ExitStatus;
 use std::{env, io, process};
 
@@ -20,6 +21,44 @@ use toml::{Value, value::Table};
 use self::cargo::{Root, Subcommand};
 use self::errors::*;
 use self::rustc::{TargetList, VersionMetaExt};
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Os {
+    Other(String),
+
+    Apple,
+    Linux,
+    Windows
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Arch {
+    Other(String),
+
+    X86_64,
+    Aarch64
+}
+
+impl From<&str> for Arch {
+    fn from(s: &str) -> Self {
+        let lower = s.to_lowercase();
+        match lower.as_str() {
+            "aarch64" | "arm64" => Arch::Aarch64,
+            "x86" | "x86_64" | "amd64" => Arch::X86_64,
+            _ => Arch::Other(lower)
+        }
+    }
+}
+
+impl ToString for Arch {
+    fn to_string(&self) -> String {
+        match self {
+            Arch::Other(a) => a.clone(),
+            Arch::X86_64 => "x86_64".to_string(),
+            Arch::Aarch64 => "AArch64".to_string(),
+        }
+    }
+}
 
 #[allow(non_camel_case_types)]
 #[derive(Debug, Clone, PartialEq)]
@@ -56,17 +95,17 @@ impl Host {
             // Old behavior (up to cross version 0.2.1) can be activated on demand using environment
             // variable `CROSS_COMPATIBILITY_VERSION`.
             Ok("0.2.1") => {
-                match self {
-                    Host::X86_64AppleDarwin | Host::Aarch64AppleDarwin => {
+                match self.os() {
+                    Os::Apple => {
                         target.map(|t| t.needs_docker()).unwrap_or(false)
-                    }
-                    Host::X86_64UnknownLinuxGnu | Host::Aarch64UnknownLinuxGnu | Host::X86_64UnknownLinuxMusl | Host::Aarch64UnknownLinuxMusl => {
+                    },
+                    Os::Linux => {
                         target.map(|t| t.needs_docker()).unwrap_or(true)
-                    }
-                    Host::X86_64PcWindowsMsvc => {
+                    },
+                    Os::Windows => {
                         target.map(|t| t.triple() != Host::X86_64PcWindowsMsvc.triple() && t.needs_docker()).unwrap_or(false)
-                    }
-                    Host::Other(_) => false,
+                    },
+                    Os::Other(_) => false,
                 }
             },
             // New behaviour, if a target is provided (--target ...) then always run with docker
@@ -93,6 +132,23 @@ impl Host {
             Host::Aarch64UnknownLinuxMusl => "aarch64-unknown-linux-musl",
             Host::X86_64PcWindowsMsvc => "x86_64-pc-windows-msvc",
             Host::Other(s) => s.as_str(),
+        }
+    }
+
+    fn os(&self) -> Os {
+        match self {
+            Host::X86_64AppleDarwin | Host::Aarch64AppleDarwin => Os::Apple,
+            Host::X86_64UnknownLinuxGnu | Host::X86_64UnknownLinuxMusl | Host::Aarch64UnknownLinuxGnu | Host::Aarch64UnknownLinuxMusl => Os::Linux,
+            Host::X86_64PcWindowsMsvc => Os::Windows,
+            Host::Other(triple) => Os::Other(triple.clone()),
+        }
+    }
+
+    fn arch(&self) -> Arch {
+        match self {
+            Host::X86_64AppleDarwin | Host::X86_64PcWindowsMsvc | Host::X86_64UnknownLinuxGnu | Host::X86_64UnknownLinuxMusl => Arch::X86_64,
+            Host::Aarch64AppleDarwin | Host::Aarch64UnknownLinuxGnu | Host::Aarch64UnknownLinuxMusl => Arch::Aarch64,
+            Host::Other(triple) => Arch::Other(triple.clone()),
         }
     }
 }
@@ -271,7 +327,41 @@ fn run() -> Result<ExitStatus> {
                 .unwrap_or_else(|| Target::from(host.triple(), &target_list));
             let toml = toml(&root)?;
 
-            let mut sysroot = rustc::sysroot(&host, &target, verbose)?;
+            let image = match docker::image(toml.as_ref(), &target) {
+                Ok(image) => Some(image),
+                Err(err) => {
+                    eprintln!("Warning: {} Falling back to `cargo` on the host.", err);
+                    None
+                },
+            };
+            let use_docker = image.is_some() && target.needs_docker() &&
+                args.subcommand.map(|sc| sc.needs_docker()).unwrap_or(false);
+
+            let mut sysroot = {
+                let mut out = rustc::sysroot(verbose)?;
+
+                if use_docker {
+                    let archs = docker::image_archs(image.as_ref().unwrap(), verbose)?;
+
+                    // Host arch is not supported by the image - default to x86
+                    let builder = if ! archs.contains(&host.arch()) {
+                        eprintln!("Warning: Docker image `{}` does not support {} - defaulting to x86_64", image.as_ref().unwrap(), host.arch().to_string());
+                        Host::X86_64UnknownLinuxGnu
+                    } else if host.os() != Os::Linux {
+                        match host.arch() {
+                            Arch::Aarch64 => Host::Aarch64UnknownLinuxGnu,
+                            Arch::X86_64 | Arch::Other(_) => Host::X86_64UnknownLinuxGnu
+                        }
+                    } else {
+                        host.clone()
+                    };
+
+                    out = out.replacen(host.triple(), builder.triple(), 1);
+                }
+                
+                PathBuf::from(out)
+            };
+
             let default_toolchain = sysroot.file_name().and_then(|file_name| file_name.to_str())
                 .ok_or("couldn't get toolchain name")?;
             let toolchain = if let Some(channel) = args.channel {
@@ -314,14 +404,6 @@ fn run() -> Result<ExitStatus> {
             }
 
             let needs_interpreter = args.subcommand.map(|sc| sc.needs_interpreter()).unwrap_or(false);
-
-            let image_exists = match docker::image(toml.as_ref(), &target) {
-                Ok(_) => true,
-                Err(err) => {
-                    eprintln!("Warning: {} Falling back to `cargo` on the host.", err);
-                    false
-                },
-            };
             
             let filtered_args = if args.subcommand.map_or(false, |s| !s.needs_target_in_command()) {
                 let mut filtered_args = Vec::new();
@@ -340,8 +422,7 @@ fn run() -> Result<ExitStatus> {
                 args.all.clone()
             };
 
-            if image_exists && target.needs_docker() &&
-               args.subcommand.map(|sc| sc.needs_docker()).unwrap_or(false) {
+            if use_docker {
                 if version_meta.needs_interpreter() &&
                     needs_interpreter &&
                     target.needs_interpreter() &&
